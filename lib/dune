@@ -1,2 +1,4 @@
 (library
- (name conway))
+ (name conway)
+ (modules htmx)
+ (libraries tyxml))

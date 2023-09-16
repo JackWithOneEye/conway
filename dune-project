@@ -19,7 +19,13 @@
  (name conway)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune dream dream-livereload tyxml)
+ (depends
+  (ocaml
+   (>= "5.0"))
+  dune
+  dream
+  dream-livereload
+  tyxml)
  (tags
   (topics "to describe" your project)))
 

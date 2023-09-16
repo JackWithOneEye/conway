@@ -4,6 +4,15 @@ pub fn main() !void {
     // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
     std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
 
+    const foo: usize = 16;
+    const bar = foo - 1;
+    const baz = bar & 15;
+
+    std.debug.print("{d} {d} {d}\n", .{ foo, bar, baz });
+
+    for (0..15) |d| {
+        std.debug.print("{d}\n", .{d});
+    }
     // stdout is for the actual output of your application, for example if you
     // are implementing gzip, then only the compressed bytes should be sent to
     // stdout, not any debugging messages.
