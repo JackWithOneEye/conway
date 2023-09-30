@@ -1,12 +1,14 @@
 {
   "scripts": {
+    "dev": "bunx concurrently \"bun:build:watch\" \"bun:tailwind:watch\"",
     "build:watch": "bunx esbuild frontend/index.ts frontend/worker/canvas.ts --bundle --outdir=static --loader:.wasm=binary --watch",
     "tailwind:watch": "bunx tailwindcss -i input.css -o static/output.css --watch"
   },
   "dependencies": {
-    "htmx.org": "^1.9.5"
+    "htmx.org": "^1.9.6"
   },
   "devDependencies": {
+    "concurrently": "^8.2.1",
     "esbuild": "^0.19.2",
     "tailwindcss": "^3.3.3"
   }

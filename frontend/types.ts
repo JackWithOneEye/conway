@@ -12,10 +12,14 @@ export declare type CanvasWorkerMessageData = {
   type: 'control';
 } | {
   value: number;
+  type: 'cellSizeChange';
+} | {
+  value: number;
   type: 'speedChange';
 } | {
   x: number;
   y: number;
+  colour: number;
   type: 'canvasOnClick';
 };
 

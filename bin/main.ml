@@ -14,8 +14,31 @@ let game =
           ]
       ]
     [ div
-        ~a:[ a_class [ "flex justify-end gap-2" ] ]
-        [ input ~a:[ a_id "speed"; a_input_type `Range ] ()
+        ~a:[ a_class [ "flex justify-end gap-2 p-2" ] ]
+        [ div
+            ~a:[ a_class [ "flex items-center gap-1 flex-1" ] ]
+            [ label ~a:[ a_label_for "cell-size" ] [ txt "Cell Size" ]
+            ; input
+                ~a:
+                  [ a_id "cell-size"
+                  ; a_input_type `Range
+                  ; a_input_min (`Number 1)
+                  ; a_value "50"
+                  ]
+                ()
+            ; span ~a:[ a_id "cell-size-state" ] [ txt "50" ]
+            ]
+        ; div
+            ~a:[ a_class [ "flex items-center gap-1 flex-1" ] ]
+            [ label ~a:[ a_label_for "cell-colour" ] [ txt "Cell Colour" ]
+            ; input ~a:[ a_id "cell-colour"; a_input_type `Color; a_value "#000000" ] ()
+            ; span ~a:[ a_id "cell-colour-state" ] [ txt "#000000" ]
+            ]
+        ; div
+            ~a:[ a_class [ "flex items-center gap-1" ] ]
+            [ label ~a:[ a_label_for "speed" ] [ txt "Speed" ]
+            ; input ~a:[ a_id "speed"; a_input_type `Range ] ()
+            ]
         ; button
             ~a:[ a_id "next"; a_class [ "p-1 border border-black active:bg-gray-400" ] ]
             [ txt "NEXT" ]

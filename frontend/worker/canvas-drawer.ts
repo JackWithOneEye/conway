@@ -11,20 +11,21 @@ class CanvasDrawer {
     this.ctx = this.canvas.getContext('2d', { alpha: true })!;
   }
 
-  draw(cellsIter: Generator<[number, number], void>) {
+  draw(cellsIter: Generator<[number, number, number], void>) {
     const { height, width } = this.canvas;
     this.ctx.clearRect(0, 0, width, height);
-    this.ctx.fillStyle = 'black';
-    for (const [x, y] of cellsIter) {
+    for (const [x, y, colour] of cellsIter) {
+      this.setCellColour(colour);
       this.ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
     }
     this.drawGrid();
   }
 
-  drawCell(x: number, y: number) {
+  drawCell(x: number, y: number, colour: number) {
+    this.setCellColour(colour);
     this.ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
     this.ctx.strokeStyle = STROKE_STYLE;
-    this.ctx.lineWidth = .6;
+    this.ctx.lineWidth = this.cellSize * 0.1;
     this.ctx.strokeRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
   }
 
@@ -33,8 +34,16 @@ class CanvasDrawer {
     this.canvas.width = w;
   }
 
+  private setCellColour(colour: number) {
+    const r = (colour >> 16) & 0xff;
+    const g = (colour >> 8) & 0xff;
+    const b = colour & 0xff;
+    this.ctx.fillStyle = `rgb(${r},${g},${b})`;
+  }
+
   private drawGrid() {
     const length = this.cellSize * this.axisLength;
+    this.ctx.beginPath();
     for (let x = 0; x <= length; x += this.cellSize) {
       this.ctx.moveTo(x, 0);
       this.ctx.lineTo(x, length);
@@ -44,7 +53,7 @@ class CanvasDrawer {
       this.ctx.lineTo(length, y);
     }
     this.ctx.strokeStyle = STROKE_STYLE;
-    this.ctx.lineWidth = 1;
+    this.ctx.lineWidth = this.cellSize * 0.1;
     this.ctx.stroke();
   }
 }

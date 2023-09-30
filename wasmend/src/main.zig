@@ -4,15 +4,22 @@ pub fn main() !void {
     // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
     std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
 
-    const foo: usize = 16;
-    const bar = foo - 1;
-    const baz = bar & 15;
+    const x: u32 = 69;
+    const y: u32 = 42;
+    const r: u32 = 1;
+    const g: u32 = 2;
+    const b: u32 = 3;
 
-    std.debug.print("{d} {d} {d}\n", .{ foo, bar, baz });
+    const foo: u56 = @as(u56, x) << 40 | y << 24 | r << 16 | g << 8 | b;
 
-    for (0..15) |d| {
-        std.debug.print("{d}\n", .{d});
-    }
+    std.debug.print(("{d}\n"), .{foo});
+
+    const xa = foo >> 40;
+    const ya = (foo >> 24) & 0xff;
+    const ra = (foo >> 16) & 0xff;
+    const ga = (foo >> 8) & 0xff;
+    const ba = (foo) & 0xff;
+    std.debug.print(("{d} {d} {d} {d} {d}\n"), .{ xa, ya, ra, ga, ba });
     // stdout is for the actual output of your application, for example if you
     // are implementing gzip, then only the compressed bytes should be sent to
     // stdout, not any debugging messages.

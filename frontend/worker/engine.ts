@@ -10,18 +10,24 @@ class Engine {
 
   private outputBuffer: Uint32Array;
 
-  private coordinate = new Array(2) as [number, number];
+  private coordinate = new Array(3) as [number, number, number];
   private calcNextGenFn: EngineWasmExports['calcNextGen'];
   private numAliveCells: number;
 
   constructor(initialState: number[]) {
     const module = new WebAssembly.Module(wasm);
-    const instance = new WebAssembly.Instance(module);
+    const instance = new WebAssembly.Instance(module, {
+      env: {
+        consoleLog: (v: unknown) => {
+          console.log('ZIG!', v)
+        }
+      }
+    });
     const { memory, axisLength, calcNextGen, init } = instance.exports as EngineWasmExports;
 
-    const ptr = init();
+    const ptr = init() >>> 0;
     this.axisLength = axisLength();
-    const bufferLength = this.axisLength * this.axisLength;
+    const bufferLength = this.axisLength * this.axisLength * 2;
     this.outputBuffer = new Uint32Array(memory.buffer).subarray(
       ptr >> BYTES_PER_UNIT,
       (ptr + bufferLength) >> BYTES_PER_UNIT
@@ -29,34 +35,42 @@ class Engine {
 
     this.calcNextGenFn = calcNextGen;
 
-    this.numAliveCells = initialState.length;
+    this.numAliveCells = initialState.length >> 1;
     const initBuf = new Uint32Array(initialState);
     this.outputBuffer.set(initBuf);
   }
 
   *aliveCells() {
-    for (let i = 0; i < this.numAliveCells; i++) {
-      const v = this.outputBuffer[i];
-      this.coordinate[0] = v >> 16;
-      this.coordinate[1] = v & 0x00ff;
+    for (let i = 0; i < this.numAliveCells * 2; i += 2) {
+      const coord = this.outputBuffer[i];
+      const colour = this.outputBuffer[i + 1];
+
+      this.coordinate[0] = (coord >> 16) & 0xff;
+      this.coordinate[1] = coord & 0xff;
+      this.coordinate[2] = colour;
       yield this.coordinate;
     }
   }
 
   calcNextGen() {
-    // const start = performance.now();
+    const start = performance.now();
     this.numAliveCells = this.calcNextGenFn(this.numAliveCells);
-    // const dur = performance.now() - start;
-    // console.log('?', dur);
+    const dur = performance.now() - start;
+    console.log('%cCALC', 'background: green; color: white', dur);
   }
 
-  setAliveCell(x: number, y: number) {
-    const coord = x << 16 | y & 0x00ff;
+  setAliveCell(x: number, y: number, colour: number) {
+    const coord = x << 16 | y;
     const idx = this.outputBuffer.indexOf(coord);
-    if (idx >= 0 && idx < this.numAliveCells) {
-      return;
+    const maxIdx = this.numAliveCells << 1;
+    if (idx >= 0 && idx < maxIdx) {
+      return false;
     }
-    this.outputBuffer[this.numAliveCells++] = coord;
+    this.outputBuffer[maxIdx] = coord;
+    this.outputBuffer[maxIdx + 1] = colour;
+    this.numAliveCells += 1;
+
+    return true;
   }
 }
 
