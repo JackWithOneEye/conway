@@ -57,11 +57,6 @@ const CellNeighbour = struct {
         var n_1 = self.alive_neighbours[1];
         var n_2 = self.alive_neighbours[2];
 
-        // consoleLog(42);
-        // consoleLog((n_0.colour));
-        // consoleLog((n_1.colour));
-        // consoleLog((n_2.colour));
-
         // sort
         if (n_0.x < n_1.x or n_0.y < n_1.y) {
             if (n_1.x < n_2.x or n_1.y < n_2.y) {

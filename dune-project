@@ -22,10 +22,14 @@
  (depends
   (ocaml
    (>= "5.0"))
+  base
+  caqti-driver-sqlite3
   dune
   dream
   dream-livereload
-  tyxml)
+  reason
+  tyxml
+  tyxml-jsx)
  (tags
   (topics "to describe" your project)))
 

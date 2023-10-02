@@ -11,10 +11,14 @@ doc: "https://url/to/documentation"
 bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml" {>= "5.0"}
+  "base"
+  "caqti-driver-sqlite3"
   "dune" {>= "3.10"}
   "dream"
   "dream-livereload"
+  "reason"
   "tyxml"
+  "tyxml-jsx"
   "odoc" {with-doc}
 ]
 build: [

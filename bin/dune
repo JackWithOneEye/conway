@@ -1,4 +1,13 @@
 (executable
  (public_name conway)
  (name main)
- (libraries conway dream dream-livereload tyxml))
+ ; This should make TyXML error messages easier to read? Will try it out later.
+ (flags :standard -short-paths)
+ (libraries
+  conway
+  components
+  base
+  caqti-driver-sqlite3
+  dream
+  dream-livereload
+  tyxml))

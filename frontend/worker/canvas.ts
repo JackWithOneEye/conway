@@ -5,28 +5,26 @@ import Looper from './looper';
 
 let drawer: CanvasDrawer;
 
-const initState = [
-  11 << 16 | 8, (255 << 0 | 0),
-  12 << 16 | 9, (255 << 0 | 0),
-  10 << 16 | 10, (255 << 0 | 0),
-  11 << 16 | 10, (255 << 0 | 0),
-  12 << 16 | 10, (255 << 0 | 0)
-];
-const engine = new Engine(initState);
+const engine = new Engine();
 
 function advance() {
+  engine.calcNextGen();
   requestAnimationFrame(() => {
-    engine.calcNextGen();
     drawer.draw(engine.aliveCells());
   });
+  postMessage({ seed: engine.readSeed() });
 }
 
 const looper = new Looper(advance);
 
 self.onmessage = function ({ data }: MessageEvent<CanvasWorkerMessageData>) {
   if (data.type === 'init') {
-    drawer = new CanvasDrawer(engine.axisLength, data.canvas);
-    drawer.cellSize = Math.max(1, data.cellSize * 0.5);
+    const { canvas, cellSize, seed } = data
+    drawer = new CanvasDrawer(engine.axisLength, canvas);
+    drawer.cellSize = Math.max(1, cellSize * 0.5);
+    if (seed.length) {
+      engine.setSeed(seed);
+    }
     return;
   }
 
@@ -69,11 +67,12 @@ self.onmessage = function ({ data }: MessageEvent<CanvasWorkerMessageData>) {
     if (cx >= engine.axisLength || cy >= engine.axisLength) {
       return;
     }
-    requestAnimationFrame(() => {
-      const canDraw = engine.setAliveCell(cx, cy, colour);
-      if (canDraw) {
+    const canDraw = engine.setAliveCell(cx, cy, colour);
+    if (canDraw) {
+      requestAnimationFrame(() => {
         drawer.drawCell(cx, cy, colour);
-      }
-    });
+      });
+      postMessage({ seed: engine.readSeed() });
+    }
   }
 }

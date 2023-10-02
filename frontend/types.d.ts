@@ -1,7 +1,13 @@
+declare global {
+  var canvasWorker: Worker;
+  var canvasWorkerMessage: (msg: CanvasWorkerMessageData, transfer?: Transferable[]) => void;
+}
+
 export declare type CanvasWorkerMessageData = {
   canvas: OffscreenCanvas;
   cellSize: number;
   speed: number;
+  seed: number[];
   type: 'init';
 } | {
   height: number;

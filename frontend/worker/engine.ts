@@ -12,9 +12,9 @@ class Engine {
 
   private coordinate = new Array(3) as [number, number, number];
   private calcNextGenFn: EngineWasmExports['calcNextGen'];
-  private numAliveCells: number;
+  private numAliveCells = 0;
 
-  constructor(initialState: number[]) {
+  constructor() {
     const module = new WebAssembly.Module(wasm);
     const instance = new WebAssembly.Instance(module, {
       env: {
@@ -27,17 +27,13 @@ class Engine {
 
     const ptr = init() >>> 0;
     this.axisLength = axisLength();
-    const bufferLength = this.axisLength * this.axisLength * 2;
+    const bufferLength = (this.axisLength * this.axisLength) << 1;
     this.outputBuffer = new Uint32Array(memory.buffer).subarray(
       ptr >> BYTES_PER_UNIT,
       (ptr + bufferLength) >> BYTES_PER_UNIT
     );
 
     this.calcNextGenFn = calcNextGen;
-
-    this.numAliveCells = initialState.length >> 1;
-    const initBuf = new Uint32Array(initialState);
-    this.outputBuffer.set(initBuf);
   }
 
   *aliveCells() {
@@ -59,6 +55,10 @@ class Engine {
     console.log('%cCALC', 'background: green; color: white', dur);
   }
 
+  readSeed() {
+    return [...this.outputBuffer.subarray(0, this.numAliveCells << 1)];
+  }
+
   setAliveCell(x: number, y: number, colour: number) {
     const coord = x << 16 | y;
     const idx = this.outputBuffer.indexOf(coord);
@@ -71,6 +71,12 @@ class Engine {
     this.numAliveCells += 1;
 
     return true;
+  }
+
+  setSeed(seed: number[]) {
+    this.numAliveCells = seed.length >> 1;
+    const seedBuf = new Uint32Array(seed);
+    this.outputBuffer.set(seedBuf);
   }
 }
 

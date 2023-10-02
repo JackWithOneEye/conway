@@ -8,10 +8,13 @@
 {
   "tailwindCSS.includeLanguages": {
     "ocaml": "html",
-    "*.ml": "html"
+    "*.ml": "html",
+    "reason": "html",
+    "*.re": "html"
   },
   "tailwindCSS.experimental.classRegex": [
-    ["a_class\\s+\\[ ((?:.|\n)+)\\s+\\]", "\"([^\"]+)\""]
+    ["a_class\\s+\\[ ((?:.|\n)+)\\s+\\]", "\"([^\"]+)\""],
+    ["class_=\"([^\"]+)\"", "([^\\s]+)"]
   ],
   "css.validate": false
 }
