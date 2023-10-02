@@ -58,8 +58,7 @@ self.onmessage = function ({ data }: MessageEvent<CanvasWorkerMessageData>) {
   }
 
   if (data.type === 'speedChange') {
-    const speed = Math.max(1, 1000 - Math.sqrt(data.value) * 100);
-    looper.speed = speed;
+    looper.speed = data.value;
     return;
   }
 

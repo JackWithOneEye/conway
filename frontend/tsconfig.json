@@ -5,6 +5,8 @@
     "moduleResolution": "Node",
     "rootDir": "../",
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false
   }
 }
