@@ -26,6 +26,16 @@ module GameOfLife = CustomElements.GameOfLife;
 
 let game = (game_seed, cell_size, cell_colour, speed) =>
   <div class_="flex flex-col flex-1 gap-x-4 gap-y-4 overflow-auto p-4">
-    <form> <input id="seed-input" hidden=() value=game_seed /> </form>
+    <form
+      id="game-form"
+      _hx_post="/game"
+      _hx_select="#game-form"
+      _hx_swap="outerHTML">
+      <input id="seed-input" name="seed" hidden=() value=game_seed />
+      <button
+        class_="p-1 border border-black active:bg-gray-400 disabled:text-gray-400 disabled:border-gray-400">
+        "SAVE"
+      </button>
+    </form>
     <GameOfLife cell_size cell_colour speed />
   </div>;

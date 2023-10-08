@@ -1,4 +1,6 @@
 (library
  (name conway)
- (modules htmx)
- (libraries tyxml))
+ (modules database htmx)
+ (libraries caqti-lwt tyxml)
+ (preprocess
+  (pps lwt_ppx)))

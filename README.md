@@ -14,6 +14,7 @@
   },
   "tailwindCSS.experimental.classRegex": [
     ["a_class\\s+\\[ ((?:.|\n)+)\\s+\\]", "\"([^\"]+)\""],
+    ["a_class\\(\\[\\s+\"([^\"]+)\",\\s+\\]\\)", "([^\\s]+)"],
     ["class_=\"([^\"]+)\"", "([^\\s]+)"]
   ],
   "css.validate": false

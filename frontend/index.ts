@@ -14,4 +14,4 @@ addEventListener('initGame', () => {
   canvasWorker.onmessage = (e: MessageEvent<{ seed: number[] }>) => {
     seedInput.setAttribute('value', e.data.seed.map(v => v.toString(16)).join(','));
   };
-}, { once: true });
+});

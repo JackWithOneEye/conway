@@ -106,7 +106,7 @@ export class GameOfLife extends LitElement {
         </div>
         <!-- next -->
         <button 
-          class="p-1 border border-black active:bg-gray-400 disabled:text-gray-400 disabled:border-gray-400" 
+          class="p-1 border border-black active:bg-gray-400 disabled:text-gray-400 disabled:border-gray-400 disabled:pointer-events-none" 
           ?disabled=${this.playing} 
           @click=${this.next}
         >
