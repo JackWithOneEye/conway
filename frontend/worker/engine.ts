@@ -40,9 +40,8 @@ class Engine {
     for (let i = 0; i < this.numAliveCells * 2; i += 2) {
       const coord = this.outputBuffer[i];
       const colour = this.outputBuffer[i + 1];
-
-      this.coordinate[0] = (coord >> 16) & 0xff;
-      this.coordinate[1] = coord & 0xff;
+      this.coordinate[0] = (coord >> 16) & 0xffff;
+      this.coordinate[1] = coord & 0xffff;
       this.coordinate[2] = colour;
       yield this.coordinate;
     }
@@ -61,7 +60,7 @@ class Engine {
 
   setAliveCell(x: number, y: number, colour: number) {
     const coord = x << 16 | y;
-    const idx = this.outputBuffer.indexOf(coord);
+    const idx = this.outputBuffer.findIndex((c, i) => !(i & 1) && c === coord);
     const maxIdx = this.numAliveCells << 1;
     if (idx >= 0 && idx < maxIdx) {
       return false;

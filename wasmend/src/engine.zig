@@ -4,9 +4,9 @@ extern fn consoleLog(val: u32) void;
 
 const allocator = std.heap.wasm_allocator;
 
-const axis_length: usize = 128;
+const axis_length: usize = 512;
 const wrap_mask: u16 = @truncate(axis_length - 1);
-const num_cells = axis_length * axis_length;
+const num_cells: usize = axis_length * axis_length;
 
 const AliveCell = packed struct {
     x: u16,
@@ -29,15 +29,12 @@ const CellNeighbour = struct {
     y: u16,
     colour: u32,
     alive_neighbours: [3]AliveCell,
-    count: u3,
+    count: u4,
     survivor: bool,
-    fn init(self: *CellNeighbour, cell: *const AliveCell, x: u16, y: u16) void {
-        self.x = x;
-        self.y = y;
-        self.colour = 0;
-        self.count = 1;
-        self.survivor = false;
-        self.alive_neighbours[0].copy(cell);
+    fn new(cell: *const AliveCell, x: u16, y: u16) CellNeighbour {
+        var cn = CellNeighbour{ .x = x, .y = y, .colour = 0, .count = 1, .survivor = false, .alive_neighbours = undefined };
+        cn.alive_neighbours[0].copy(cell);
+        return cn;
     }
     fn increment(self: *CellNeighbour, neighbour: *const AliveCell) void {
         if (self.count < 3) {
@@ -93,10 +90,13 @@ const CellNeighbour = struct {
 };
 
 var output_buffer = std.mem.zeroes([num_cells]AliveCell);
-var neighbours = std.ArrayList(CellNeighbour).init(allocator);
+var neighbours = std.AutoArrayHashMap(u32, CellNeighbour).init(allocator);
 
 export fn init() [*]u32 {
-    _ = neighbours.addManyAsArray(num_cells) catch unreachable;
+    for (0..num_cells) |i| {
+        neighbours.put(@truncate(i), undefined) catch continue;
+    }
+    neighbours.clearRetainingCapacity();
     return @ptrCast(&output_buffer);
 }
 
@@ -104,65 +104,65 @@ export fn axisLength() usize {
     return axis_length;
 }
 
-fn setNeighbour(cell: *const AliveCell, x: u16, y: u16, colour: u32, num_neighbours: u16) u16 {
-    _ = colour;
-    for (neighbours.items[0..num_neighbours]) |*n| {
-        if (n.x == x and n.y == y) {
-            n.increment(cell);
-            return num_neighbours;
-        }
+fn makeCoord(x: u16, y: u16) u32 {
+    return (@as(u32, x) << 16) | y;
+}
+
+fn setNeighbour(cell: *const AliveCell, x: u16, y: u16) void {
+    const coord = makeCoord(x, y);
+    var n_opt = neighbours.getPtr(coord);
+    if (n_opt) |n| {
+        n.increment(cell);
+        return;
     }
-    neighbours.items[num_neighbours].init(cell, x, y);
-    return num_neighbours + 1;
+    neighbours.putAssumeCapacity(coord, CellNeighbour.new(cell, x, y));
 }
 
 export fn calcNextGen(length: u32) u32 {
     var num_alive: u32 = 0;
-    var num_neighbours: u16 = 0;
     for (output_buffer[0..length]) |cell| {
         const x = cell.x;
-        var x_left = wrap_mask;
-        if (x > 0) {
-            x_left = x - 1;
-        }
+        const x_left = (x -% 1) & wrap_mask;
         const x_right = (x + 1) & wrap_mask;
 
         const y = cell.y;
-        var y_up = wrap_mask;
-        if (y > 0) {
-            y_up = y - 1;
-        }
+        const y_up = (y -% 1) & wrap_mask;
         const y_down = (y + 1) & wrap_mask;
 
-        num_neighbours = setNeighbour(&cell, x_left, y_up, cell.colour, num_neighbours);
-        num_neighbours = setNeighbour(&cell, x, y_up, cell.colour, num_neighbours);
-        num_neighbours = setNeighbour(&cell, x_right, y_up, cell.colour, num_neighbours);
+        setNeighbour(&cell, x_left, y_up);
+        setNeighbour(&cell, x, y_up);
+        setNeighbour(&cell, x_right, y_up);
 
-        num_neighbours = setNeighbour(&cell, x_left, y, cell.colour, num_neighbours);
-        num_neighbours = setNeighbour(&cell, x_right, y, cell.colour, num_neighbours);
+        setNeighbour(&cell, x_left, y);
+        setNeighbour(&cell, x_right, y);
 
-        num_neighbours = setNeighbour(&cell, x_left, y_down, cell.colour, num_neighbours);
-        num_neighbours = setNeighbour(&cell, x, y_down, cell.colour, num_neighbours);
-        num_neighbours = setNeighbour(&cell, x_right, y_down, cell.colour, num_neighbours);
+        setNeighbour(&cell, x_left, y_down);
+        setNeighbour(&cell, x, y_down);
+        setNeighbour(&cell, x_right, y_down);
     }
 
     for (output_buffer[0..length]) |cell| {
-        for (neighbours.items[0..num_neighbours]) |*neighbour| {
-            const cnt = neighbour.count;
-            if ((cnt == 2 or cnt == 3) and neighbour.x == cell.x and neighbour.y == cell.y) {
-                neighbour.survive(cell.colour);
+        const coord = makeCoord(cell.x, cell.y);
+        var n_opt = neighbours.getPtr(coord);
+        if (n_opt) |n| {
+            const cnt = n.count;
+            if (cnt == 2 or cnt == 3) {
+                n.survive(cell.colour);
             }
         }
     }
 
-    for (neighbours.items[0..num_neighbours]) |*neighbour| {
-        if (neighbour.count == 3) {
-            if (!neighbour.survivor) {
-                neighbour.create();
+    var iter = neighbours.iterator();
+    while (iter.next()) |neighbour| {
+        var n = neighbour.value_ptr;
+        if (n.count == 3) {
+            if (!n.survivor) {
+                n.create();
             }
-            output_buffer[num_alive].set(neighbour.x, neighbour.y, neighbour.colour);
+            output_buffer[num_alive].set(n.x, n.y, n.colour);
             num_alive += 1;
         }
     }
+    neighbours.clearRetainingCapacity();
     return num_alive;
 }

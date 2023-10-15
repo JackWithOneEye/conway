@@ -1,5 +1,13 @@
 # Conway's Game of Life
 
+## TODOs
+
+- CSS
+- configurable rules
+- object catalogue
+- random colour mutations
+- ...?
+
 ## Editor
 
 ### VS Code settings
