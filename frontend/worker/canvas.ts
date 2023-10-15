@@ -48,7 +48,7 @@ self.onmessage = function ({ data }: MessageEvent<CanvasWorkerMessageData>) {
   }
 
   if (data.type === 'cellSizeChange') {
-    drawer.cellSize = Math.max(1, data.value * 0.5);
+    drawer.cellSize = Math.round(2 + (38 / 100) * data.value);
     requestAnimationFrame(() => {
       drawer.draw(engine.aliveCells());
     });
@@ -60,10 +60,17 @@ self.onmessage = function ({ data }: MessageEvent<CanvasWorkerMessageData>) {
     return;
   }
 
+  if (data.type === 'canvasOnDrag') {
+    drawer.incrementOffset(data.x, data.y);
+    requestAnimationFrame(() => {
+      drawer.draw(engine.aliveCells());
+    });
+    return;
+  }
+
   if (data.type === 'canvasOnClick') {
     const { x, y, colour } = data;
-    const cx = Math.floor(x / drawer.cellSize);
-    const cy = Math.floor(y / drawer.cellSize);
+    const [cx, cy] = drawer.pixelToCellCoord(x, y);
     if (cx >= engine.axisLength || cy >= engine.axisLength) {
       return;
     }

@@ -1,12 +1,22 @@
 const std = @import("std");
 
+const Foo = struct { bar: u16, baz: f64 };
+
+fn print(ptr: *const Foo) void {
+    std.debug.print("!!! {}\n", .{ptr.*});
+}
+
 pub fn main() !void {
     // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
     std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
 
     const x: u16 = 0;
     const x_left = (x -% 1) & 511;
-    std.debug.print("{d} {d}\n", .{ x, x_left });
+    const undef: Foo = undefined;
+    const undef_ptr: *Foo = undefined;
+    // undef_ptr = &undef;
+    print(undef_ptr);
+    std.debug.print("{} {} {} {}\n", .{ x, x_left, undef, undef_ptr });
 
     // stdout is for the actual output of your application, for example if you
     // are implementing gzip, then only the compressed bytes should be sent to

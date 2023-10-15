@@ -1,5 +1,7 @@
 import { LitElement, html } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property, query, state } from 'lit/decorators.js';
+
+type CanvasMouseState = 'idle' | 'down' | 'dragging';
 
 @customElement('game-of-life')
 export class GameOfLife extends LitElement {
@@ -19,9 +21,29 @@ export class GameOfLife extends LitElement {
   @state()
   private playing = false;
 
+  @query('canvas')
+  private canvas!: HTMLCanvasElement;
+
+  private dragState = { x: 0, y: 0 };
+  private dragLeftAt = { x: 0, y: 0 };
+
+  @state()
+  private canvasMouseState: CanvasMouseState = 'idle';
+
   constructor() {
     super();
     this.onWrapperResize = this.onWrapperResize.bind(this);
+    this.onDocumentMouseUp = this.onDocumentMouseUp.bind(this);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener('mouseup', this.onDocumentMouseUp);
+  }
+
+  disconnectedCallback() {
+    document.removeEventListener('mouseup', this.onDocumentMouseUp);
+    super.disconnectedCallback();
   }
 
   protected createRenderRoot() {
@@ -29,8 +51,6 @@ export class GameOfLife extends LitElement {
   }
 
   protected firstUpdated() {
-    const canvas = this.querySelector('canvas')!;
-
     const seedInput = document.querySelector('#seed-input') as HTMLInputElement;
     const dataSeed = seedInput.value;
     const seed = [];
@@ -40,7 +60,7 @@ export class GameOfLife extends LitElement {
       }
     }
 
-    const offscreen = canvas.transferControlToOffscreen();
+    const offscreen = this.canvas.transferControlToOffscreen();
     canvasWorkerMessage({
       canvas: offscreen,
       cellSize: this.cellSize,
@@ -120,11 +140,24 @@ export class GameOfLife extends LitElement {
           ${this.playing ? 'PAUSE' : 'PLAY'}
         </button>
       </div>
-      <!-- canvas -->
-      <div id="canvas-wrapper" class="relative flex-1 p-1 overflow-hidden">
-        <canvas class="m-auto" @click=${this.onCanvasClick} width="100" height="100">
-          get yourself a new browser
-        </canvas>
+      <div class="flex flex-1 p-1 overflow-hidden">
+        <div class="w-full p-1 border border-gray-400">
+          <!-- canvas -->
+          <div id="canvas-wrapper" class="relative h-full">
+            <canvas 
+              class="data-[dragging]:cursor-grab"
+              ?data-dragging=${this.canvasMouseState === 'dragging'}
+              @mousedown=${this.onCanvasMouseDown}
+              @mouseleave=${this.onCanvasMouseLeave}
+              @mousemove=${this.onCanvasMouseMove}
+              @mouseup=${this.onCanvasMouseUp}
+              width="100"
+              height="100"
+            >
+              get yourself a new browser
+            </canvas>
+          </div>
+        </div>
       </div>
     `
   }
@@ -139,9 +172,46 @@ export class GameOfLife extends LitElement {
     canvasWorkerMessage({ command: 'next', type: 'control' });
   }
 
-  private onCanvasClick(e: MouseEvent) {
+  private onCanvasMouseDown(e: MouseEvent) {
     e.preventDefault();
-    canvasWorkerMessage({ x: e.offsetX, y: e.offsetY, colour: this.cellColour, type: 'canvasOnClick' })
+    e.stopPropagation();
+    this.dragState.x = e.x;
+    this.dragState.y = e.y;
+    this.canvasMouseState = 'down';
+  }
+
+  private onCanvasMouseLeave({ x, y }: MouseEvent) {
+    if (this.canvasMouseState === 'dragging') {
+      this.dragLeftAt.x = x;
+      this.dragLeftAt.y = y;
+    }
+  }
+
+  private onCanvasMouseMove(e: MouseEvent) {
+    if (this.canvasMouseState !== 'down' && this.canvasMouseState !== 'dragging') {
+      return;
+    }
+    const x = e.x - this.dragState.x;
+    const y = e.y - this.dragState.y;
+    if (this.canvasMouseState === 'dragging' || Math.abs(x) > 10 || Math.abs(y) > 10) {
+      canvasWorkerMessage({ x, y, type: 'canvasOnDrag' });
+      this.dragState.x = e.x;
+      this.dragState.y = e.y;
+      this.canvasMouseState = 'dragging';
+    }
+  }
+
+  private onCanvasMouseUp(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.canvasMouseState === 'down') {
+      canvasWorkerMessage({ x: e.offsetX, y: e.offsetY, colour: this.cellColour, type: 'canvasOnClick' });
+    }
+    this.canvasMouseState = 'idle';
+  }
+
+  private onDocumentMouseUp() {
+    this.canvasMouseState = 'idle';
   }
 
   private onCellColourChange({ target }: Event) {
@@ -161,8 +231,8 @@ export class GameOfLife extends LitElement {
   private onWrapperResize(entries: ResizeObserverEntry[]) {
     const { height, width } = entries[0].contentRect;
     canvasWorkerMessage({
-      height: height - this.cellSize,
-      width: width - this.cellSize,
+      height: height,
+      width: width,
       type: 'resize'
     });
   }

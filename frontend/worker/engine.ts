@@ -59,6 +59,8 @@ class Engine {
   }
 
   setAliveCell(x: number, y: number, colour: number) {
+    x &= (this.axisLength - 1);
+    y &= (this.axisLength - 1);
     const coord = x << 16 | y;
     const idx = this.outputBuffer.findIndex((c, i) => !(i & 1) && c === coord);
     const maxIdx = this.numAliveCells << 1;

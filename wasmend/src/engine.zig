@@ -4,7 +4,7 @@ extern fn consoleLog(val: u32) void;
 
 const allocator = std.heap.wasm_allocator;
 
-const axis_length: usize = 512;
+const axis_length: usize = 1024;
 const wrap_mask: u16 = @truncate(axis_length - 1);
 const num_cells: usize = axis_length * axis_length;
 

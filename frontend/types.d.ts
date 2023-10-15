@@ -25,6 +25,10 @@ export declare type CanvasWorkerMessageData = {
 } | {
   x: number;
   y: number;
+  type: 'canvasOnDrag';
+} | {
+  x: number;
+  y: number;
   colour: number;
   type: 'canvasOnClick';
 };
