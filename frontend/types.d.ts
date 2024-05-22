@@ -1,36 +1,16 @@
 declare global {
-  var canvasWorker: Worker;
-  var canvasWorkerMessage: (msg: CanvasWorkerMessageData, transfer?: Transferable[]) => void;
+  var initCanvasWorker: (msg: CanvasWorkerInitMessage, offscreenCanvas: OffscreenCanvas) => void;
 }
 
-export declare type CanvasWorkerMessageData = {
+export declare type CanvasWorkerInitMessage = {
   canvas: OffscreenCanvas;
   cellSize: number;
-  speed: number;
-  seed: number[];
-  type: 'init';
-} | {
   height: number;
+  messageBuffer: Int32Array;
+  seed: number[];
+  speed: number;
+  type: 'init';
   width: number;
-  type: 'resize';
-} | {
-  command: 'next' | 'play' | 'stop';
-  type: 'control';
-} | {
-  value: number;
-  type: 'cellSizeChange';
-} | {
-  value: number;
-  type: 'speedChange';
-} | {
-  x: number;
-  y: number;
-  type: 'canvasOnDrag';
-} | {
-  x: number;
-  y: number;
-  colour: number;
-  type: 'canvasOnClick';
 };
 
 export declare type EngineWasmExports = {

@@ -4,7 +4,7 @@ module.exports = {
     "./bin/**/*.ml",
     "./lib/**/*.ml",
     "./lib/**/*.re",
-    "./frontend/game-of-life.ts"
+    "./frontend/game-of-life.js"
   ],
   theme: {
     extend: {},

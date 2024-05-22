@@ -1,7 +1,6 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "lib": ["ESNext", "WebWorker"]
+    "lib": ["esnext", "webworker"]
   }
 }

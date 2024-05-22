@@ -110,7 +110,7 @@ fn makeCoord(x: u16, y: u16) u32 {
 
 fn setNeighbour(cell: *const AliveCell, x: u16, y: u16) void {
     const coord = makeCoord(x, y);
-    var n_opt = neighbours.getPtr(coord);
+    const n_opt = neighbours.getPtr(coord);
     if (n_opt) |n| {
         n.increment(cell);
         return;
@@ -143,7 +143,7 @@ export fn calcNextGen(length: u32) u32 {
 
     for (output_buffer[0..length]) |cell| {
         const coord = makeCoord(cell.x, cell.y);
-        var n_opt = neighbours.getPtr(coord);
+        const n_opt = neighbours.getPtr(coord);
         if (n_opt) |n| {
             const cnt = n.count;
             if (cnt == 2 or cnt == 3) {

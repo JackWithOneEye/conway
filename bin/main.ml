@@ -31,11 +31,20 @@ let post_game request =
 
 let db_file = Unix.getenv "HOME" |> Fmt.str "sqlite3:%s/.conway/db.sqlite"
 
+let secure_context_headers (inner_handler : Dream.handler) request =
+  let open Lwt.Syntax in
+  let+ response = inner_handler request in
+  Dream.add_header response "Cross-Origin-Opener-Policy" "same-origin";
+  Dream.add_header response "Cross-Origin-Embedder-Policy" "require-corp";
+  response
+;;
+
 let () =
   Dream.run
   @@ Dream.logger
   @@ Dream_livereload.inject_script ()
   @@ Dream.sql_pool db_file
+  @@ secure_context_headers
   @@ Dream.router
        [ Dream.get "/" (fun _ ->
            Pages.layout "Conway's Game of Life" "/game" |> html_to_string |> Dream.html)
