@@ -1,34 +1,9 @@
 import CanvasDrawer from './canvas-drawer';
 import Engine from './engine';
-import Looper from './looper';
 import { Command, MessageIndex, MessageType } from '../message';
+import Looper from './looper';
 
 let initialised = false;
-
-/** @type {CanvasDrawer} */
-let drawer;
-
-function draw() {
-  // requestAnimationFrame(() => {
-  // });
-  drawer.draw(engine.aliveCells());
-}
-
-const engine = new Engine();
-
-function postSeed() {
-  queueMicrotask(() => {
-    postMessage({ seed: engine.readSeed() });
-  });
-}
-
-function advance() {
-  engine.calcNextGen();
-  draw();
-  postSeed();
-}
-
-const looper = new Looper(advance);
 
 /** @param {number} cellSize */
 function scaleCellSize(cellSize) {
@@ -49,12 +24,30 @@ self.onmessage = function ({ data }) {
     return;
   }
 
-  const { canvas, cellSize, seed, height, width, messageBuffer } = data
-  drawer = new CanvasDrawer(engine.axisLength, canvas, scaleCellSize(cellSize), height, width);
+  const { canvas, cellSize, seed, height, width, messageBuffer } = data;
+
+  const engine = new Engine();
   if (seed.length) {
     engine.setSeed(seed);
   }
-  draw();
+  function postSeed() {
+    queueMicrotask(() => {
+      postMessage({ seed: engine.readSeed() });
+    });
+  }
+
+  const drawer = new CanvasDrawer(engine.axisLength, canvas, scaleCellSize(cellSize), height, width);
+  function draw() {
+    requestAnimationFrame(() => {
+      drawer.draw(engine.aliveCells());
+    });
+  }
+
+  const looper = new Looper(() => {
+    engine.calcNextGen();
+    drawer.draw(engine.aliveCells());
+    postSeed();
+  });
 
   async function listen() {
     if (await Atomics.waitAsync(messageBuffer, MessageIndex.UPDATE, 1).value === 'ok') {
@@ -69,7 +62,7 @@ self.onmessage = function ({ data }) {
       if ((type & MessageType.CONTROL) === MessageType.CONTROL) {
         const cmd = messageBuffer[MessageIndex.CONTROL_CMD];
         if (cmd === Command.NEXT) {
-          advance();
+          looper.requestAnimation();
         } else if (cmd === Command.PLAY) {
           looper.start();
         } else if (cmd === Command.STOP) {
@@ -111,5 +104,7 @@ self.onmessage = function ({ data }) {
     }
     listen();
   }
+
+  draw();
   listen();
 }
