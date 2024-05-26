@@ -2,7 +2,8 @@
   "scripts": {
     "dev": "bunx concurrently \"bun:build:watch\" \"bun:tailwind:watch\"",
     "build:watch": "bunx esbuild frontend/index.js frontend/worker/canvas.js --bundle --outdir=static --format=esm --loader:.wasm=binary --watch",
-    "tailwind:watch": "bunx tailwindcss -i input.css -o static/output.css --watch"
+    "tailwind:watch": "bunx tailwindcss -i input.css -o static/output.css --watch",
+    "build-wasm": "cd wasmend && zig build-exe src/engine.zig -target wasm32-freestanding -fno-entry -rdynamic -O ReleaseFast --name engine"
   },
   "dependencies": {
     "htmx.org": "^1.9.12",

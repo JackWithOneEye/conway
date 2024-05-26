@@ -58,6 +58,29 @@ class Engine {
     console.log('%cCALC', 'background: green; color: white', dur);
   }
 
+  /**
+   * @param {number} x 
+   * @param {number} y 
+   */
+  canSetAliveCell(x, y) {
+    x &= (this.axisLength - 1);
+    y &= (this.axisLength - 1);
+    const coord = x << 16 | y;
+    for (let i = 0; i < this.#outputBuffer.length; i++) {
+      if (!(i & 1) && this.#outputBuffer[i] === coord) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  clear() {
+    this.#numAliveCells = 0;
+    for (let i = 0; i < this.#outputBuffer.length; i++) {
+      this.#outputBuffer[i] = 0;
+    }
+  }
+
   readSeed() {
     return [...this.#outputBuffer.subarray(0, this.#numAliveCells << 1)];
   }
@@ -66,15 +89,24 @@ class Engine {
    * @param {number} x 
    * @param {number} y 
    * @param {number} colour 
+   * @param {boolean} [noCheck=false] 
    */
-  setAliveCell(x, y, colour) {
+  setAliveCell(x, y, colour, noCheck = false) {
     x &= (this.axisLength - 1);
     y &= (this.axisLength - 1);
     const coord = x << 16 | y;
-    const idx = this.#outputBuffer.findIndex((c, i) => !(i & 1) && c === coord);
     const maxIdx = this.#numAliveCells << 1;
-    if (idx >= 0 && idx < maxIdx) {
-      return false;
+    if (!noCheck) {
+      let idx = -1;
+      for (let i = 0; i < this.#outputBuffer.length; i++) {
+        if (!(i & 1) && this.#outputBuffer[i] === coord) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx >= 0 && idx < maxIdx) {
+        return false;
+      }
     }
     this.#outputBuffer[maxIdx] = coord;
     this.#outputBuffer[maxIdx + 1] = colour;

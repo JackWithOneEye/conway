@@ -17,7 +17,16 @@ export const MessageIndex = /** @type {const} */ ({
   CLICK_X: 9,
   CLICK_Y: 10,
   CLICK_COLOUR: 11,
+
+  DROP_X: 12,
+  DROP_Y: 13,
+  DROP_COLOUR: 14,
+  DROP_PATTERN_LEN: 15,
+  DROP_PATTERN: 16
+  // drop pattern from here
 });
+
+
 
 export const MessageType = /** @type {const} */ ({
   RESIZE: 1,
@@ -25,7 +34,9 @@ export const MessageType = /** @type {const} */ ({
   CELL_SIZE_CHANGE: 4,
   SPEED_CHANGE: 8,
   CANVAS_ON_DRAG: 16,
-  CANVAS_ONCLICK: 32,
+  CANVAS_ON_CLICK: 32,
+  CANVAS_ON_DROP: 64,
+  CLEAR: 128,
 });
 
 export const Command = /** @type {const} */ ({

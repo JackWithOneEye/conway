@@ -82,10 +82,6 @@ const CellNeighbour = struct {
         }
 
         self.colour = (n_0.colour & 0xff0000) | (n_1.colour & 0x00ff00) | (n_2.colour & 0x0000ff);
-
-        if (self.colour == 0xffffff) {
-            self.colour = 0;
-        }
     }
 };
 

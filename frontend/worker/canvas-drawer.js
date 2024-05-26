@@ -7,6 +7,7 @@ class CanvasDrawer {
   set cellSize(cs) {
     this.#cellSize = cs;
     this.#canvasLength = this.#cellSize * this.#axisLength;
+    this.incrementOffset(0, 0);
   }
 
   /** @type {number} */
@@ -20,7 +21,6 @@ class CanvasDrawer {
   /** @type {OffscreenCanvasRenderingContext2D} */
   #ctx;
   #offset = { x: 0, y: 0 };
-
 
   /** @type {[[number, number], [number, number]]} */
   #horizCoord = [[0, 0], [0, 0]];
@@ -48,14 +48,62 @@ class CanvasDrawer {
    */
   draw(cellsIter) {
     const start = performance.now();
-    const { height, width } = this.#canvas;
-    this.#ctx.clearRect(0, 0, width, height);
+    this.#ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
     this.#drawGrid();
+
+    const csInv = 1 / this.#cellSize;
+
+    let visX = 0;
+    let visXEnd = Infinity;
+    if (this.#canvas.width < this.#canvasLength) {
+      if (this.#offset.x <= 0) {
+        visX = Math.floor(-this.#offset.x * csInv)
+      } else {
+        visX = Math.floor(this.#axisLength - (this.#offset.x * csInv))
+      }
+      visXEnd = visX + Math.ceil(this.#canvas.width * csInv);
+      if (visXEnd >= this.#axisLength) {
+        visXEnd -= this.#axisLength;
+      }
+    }
+
+    let visY = 0;
+    let visYEnd = Infinity;
+    if (this.#canvas.height < this.#canvasLength) {
+      if (this.#offset.y <= 0) {
+        visY = Math.floor(-this.#offset.y * csInv)
+      } else {
+        visY = Math.floor(this.#axisLength - (this.#offset.y * csInv))
+      }
+      visYEnd = visY + Math.ceil(this.#canvas.height * csInv);
+      if (visYEnd >= this.#axisLength) {
+        visYEnd -= this.#axisLength;
+      }
+    }
+
+    // console.log('VISIBLE WORLD',
+    //   visX,
+    //   visXEnd,
+    //   visY,
+    //   visYEnd
+    // )
+
+    let cnt = 0;
     for (const [x, y, colour] of cellsIter) {
+      if (
+        ((visX < visXEnd) && (x < visX || x > visXEnd)) ||
+        ((visX > visXEnd) && (x > visXEnd && x < visX)) ||
+
+        ((visY < visYEnd) && (y < visY || y > visYEnd)) ||
+        ((visY > visYEnd) && (y > visYEnd && y < visY))
+      ) {
+        continue;
+      }
       this.#fillCell(x, y, colour);
+      cnt++;
     }
     const dur = performance.now() - start;
-    console.log('%cDRAW', 'background: green; color: white', dur);
+    console.log('%cDRAW', 'background: green; color: white', dur, cnt);
   }
 
   /**
@@ -81,12 +129,12 @@ class CanvasDrawer {
    */
   incrementOffset(x, y) {
     let ox = this.#offset.x + x;
-    if (Math.abs(ox) >= this.#canvasLength) {
+    while (Math.abs(ox) >= this.#canvasLength) {
       ox = Math.sign(ox) * (Math.abs(ox) - this.#canvasLength);
     }
     this.#offset.x = ox;
     let oy = this.#offset.y + y;
-    if (Math.abs(oy) >= this.#canvasLength) {
+    while (Math.abs(oy) >= this.#canvasLength) {
       oy = Math.sign(oy) * (Math.abs(oy) - this.#canvasLength);
     }
     this.#offset.y = oy;
@@ -115,18 +163,20 @@ class CanvasDrawer {
 
   #drawGrid() {
     this.#ctx.beginPath();
+    const width = Math.min(this.#canvas.width, this.#canvasLength);
+    const height = Math.min(this.#canvas.height, this.#canvasLength);
 
     let x = this.#offset.x % this.#cellSize;
-    while (x <= this.#canvasLength) {
+    while (x <= width) {
       this.#ctx.moveTo(x + GRID_LINE_WIDTH, 0);
-      this.#ctx.lineTo(x + GRID_LINE_WIDTH, this.#canvasLength);
+      this.#ctx.lineTo(x + GRID_LINE_WIDTH, height);
       x += this.#cellSize;
     }
 
     let y = this.#offset.y % this.#cellSize;
-    while (y <= this.#canvasLength) {
+    while (y <= height) {
       this.#ctx.moveTo(0, y + GRID_LINE_WIDTH);
-      this.#ctx.lineTo(this.#canvasLength, y + GRID_LINE_WIDTH);
+      this.#ctx.lineTo(width, y + GRID_LINE_WIDTH);
       y += this.#cellSize;
     }
 
@@ -141,11 +191,6 @@ class CanvasDrawer {
    * @param {number} colour 
    */
   #fillCell(x, y, colour) {
-    const r = (colour >> 16) & 0xff;
-    const g = (colour >> 8) & 0xff;
-    const b = colour & 0xff;
-    this.#ctx.fillStyle = `rgb(${r},${g},${b})`;
-
     x = x * this.#cellSize + this.#offset.x;
     y = y * this.#cellSize + this.#offset.y;
 
@@ -164,7 +209,7 @@ class CanvasDrawer {
     } else if (xEnd >= this.#canvasLength) {
       const leftWidth = this.#canvasLength - x;
       this.#horizCoord[0][0] = x + GRID_LINE_WIDTH;
-      this.#horizCoord[0][1] = leftWidth;
+      this.#horizCoord[0][1] = leftWidth - GRID_LINE_WIDTH;
       this.#horizCoord[1][0] = 0;
       this.#horizCoord[1][1] = this.#cellSize - leftWidth;
       horizLen = 2;
@@ -203,6 +248,10 @@ class CanvasDrawer {
       vertLen = 1;
     }
 
+    const r = (colour >> 16) & 0xff;
+    const g = (colour >> 8) & 0xff;
+    const b = colour & 0xff;
+    this.#ctx.fillStyle = `rgb(${r},${g},${b})`;
     for (let h = 0; h < horizLen; h++) {
       const [x, width] = this.#horizCoord[h];
       for (let v = 0; v < vertLen; v++) {

@@ -84,19 +84,52 @@ self.onmessage = function ({ data }) {
         redraw = true;
       }
 
-      if ((type & MessageType.CANVAS_ONCLICK) === MessageType.CANVAS_ONCLICK) {
+      if ((type & MessageType.CANVAS_ON_CLICK) === MessageType.CANVAS_ON_CLICK) {
         const x = messageBuffer[MessageIndex.CLICK_X];
         const y = messageBuffer[MessageIndex.CLICK_Y];
         const colour = messageBuffer[MessageIndex.CLICK_COLOUR];
         const [cx, cy] = drawer.pixelToCellCoord(x, y);
-        if (cx < engine.axisLength && cy < engine.axisLength) {
-          const canDraw = engine.setAliveCell(cx, cy, colour);
-          if (canDraw) {
-            postSeed();
-            redraw = true
-          }
+        const canDraw = engine.setAliveCell(cx, cy, colour);
+        if (canDraw) {
+          postSeed();
+          redraw = true
         }
       }
+
+      if ((type & MessageType.CANVAS_ON_DROP) === MessageType.CANVAS_ON_DROP) {
+        const x = messageBuffer[MessageIndex.DROP_X];
+        const y = messageBuffer[MessageIndex.DROP_Y];
+        const colour = messageBuffer[MessageIndex.DROP_COLOUR];
+        const length = messageBuffer[MessageIndex.DROP_PATTERN_LEN];
+        const pattern = messageBuffer.slice(MessageIndex.DROP_PATTERN, MessageIndex.DROP_PATTERN + length);
+        const [cx, cy] = drawer.pixelToCellCoord(x, y);
+        let abort = false;
+        /** @type {[number, number][]} */
+        const coordinates = [];
+        for (const pc of pattern) {
+          const px = cx + ((pc >> 16) & 0xffff);
+          const py = cy + (pc & 0xffff);
+          if (!engine.canSetAliveCell(px, py)) {
+            abort = true;
+            break;
+          }
+          coordinates.push([px, py]);
+        }
+        if (!abort) {
+          for (const [px, py] of coordinates) {
+            engine.setAliveCell(px, py, colour, true);
+          }
+          postSeed();
+          redraw = true;
+        }
+      }
+
+      if ((type & MessageType.CLEAR) === MessageType.CLEAR) {
+        engine.clear();
+        postSeed();
+        redraw = true;
+      }
+
       if (redraw) {
         draw();
       }

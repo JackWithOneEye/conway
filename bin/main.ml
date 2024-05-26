@@ -46,8 +46,7 @@ let () =
   @@ Dream.sql_pool db_file
   @@ secure_context_headers
   @@ Dream.router
-       [ Dream.get "/" (fun _ ->
-           Pages.layout "Conway's Game of Life" "/game" |> html_to_string |> Dream.html)
+       [ Dream.get "/" (fun _ -> Pages.layout "/game" |> html_to_string |> Dream.html)
        ; Dream.get "/game" get_game
        ; Dream.post "/game" post_game
        ; Dream.get "/static/**" @@ Dream.static "./static"

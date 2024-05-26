@@ -1,6 +1,16 @@
 open Tyxml;
 
-let layout = (page_title, path) =>
+let page_title = "Conway's Game of Life";
+
+let pageHeader = (~actions=<span />, ()) =>
+  <header class_="flex items-center justify-between px-3 pt-2">
+    <span class_="italic font-semibold text-3xl">
+      {Html.txt(page_title)}
+    </span>
+    actions
+  </header>;
+
+let layout = path =>
   <Html.html>
     <head>
       <title> {Html.txt(page_title)} </title>
@@ -9,15 +19,13 @@ let layout = (page_title, path) =>
       <script src="/static/index.js" />
     </head>
     <body class_="bg-gray-200 text-black font-sans">
-      <div class_="h-screen flex flex-col">
-        <header class_="flex items-center px-3 pt-2">
-          <span class_="italic font-semibold text-3xl">
-            {Html.txt(page_title)}
-          </span>
-        </header>
-        <main class_="contents">
-          <div _hx_get=path _hx_trigger="load" _hx_swap="outerHTML" />
-        </main>
+      <div
+        class_="h-screen flex flex-col"
+        _hx_get=path
+        _hx_trigger="load"
+        _hx_swap="outerHTML">
+        {pageHeader()}
+        <main class_="contents" />
       </div>
     </body>
   </Html.html>;
@@ -25,17 +33,25 @@ let layout = (page_title, path) =>
 module GameOfLife = CustomElements.GameOfLife;
 
 let game = (game_seed, cell_size, cell_colour, speed) =>
-  <div class_="flex flex-col flex-1 gap-x-4 gap-y-4 overflow-auto p-4">
-    <form
-      id="game-form"
-      _hx_post="/game"
-      _hx_select="#game-form"
-      _hx_swap="outerHTML">
-      <input id="seed-input" name="seed" hidden=() value=game_seed />
-      <button
-        class_="p-1 border border-black active:bg-gray-400 disabled:text-gray-400 disabled:border-gray-400">
-        "SAVE"
-      </button>
-    </form>
-    <GameOfLife cell_size cell_colour speed />
+  <div class_="h-screen flex flex-col">
+    {pageHeader(
+       ~actions=
+         <form
+           id="game-form"
+           _hx_post="/game"
+           _hx_select="#game-form"
+           _hx_swap="outerHTML">
+           <input id="seed-input" name="seed" hidden=() value=game_seed />
+           <button
+             class_="p-1 border border-black active:bg-gray-400 disabled:text-gray-400 disabled:border-gray-400">
+             "SAVE"
+           </button>
+         </form>,
+       (),
+     )}
+    <main class_="contents">
+      <div class_="flex flex-col flex-1 gap-x-4 gap-y-4 overflow-auto p-4">
+        <GameOfLife cell_size cell_colour speed />
+      </div>
+    </main>
   </div>;
