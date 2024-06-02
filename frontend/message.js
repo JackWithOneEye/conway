@@ -5,7 +5,7 @@ export const MessageIndex = /** @type {const} */ ({
   RESIZE_HEIGHT: 2,
   RESIZE_WIDTH: 3,
 
-  CONTROL_CMD: 4,
+  COMMAND: 4,
 
   CELL_SIZE: 5,
 
@@ -30,17 +30,18 @@ export const MessageIndex = /** @type {const} */ ({
 
 export const MessageType = /** @type {const} */ ({
   RESIZE: 1,
-  CONTROL: 2,
+  COMMAND: 2,
   CELL_SIZE_CHANGE: 4,
   SPEED_CHANGE: 8,
   CANVAS_ON_DRAG: 16,
   CANVAS_ON_CLICK: 32,
   CANVAS_ON_DROP: 64,
-  CLEAR: 128,
 });
 
 export const Command = /** @type {const} */ ({
   NEXT: 0,
   PLAY: 1,
   STOP: 2,
+  CLEAR: 3,
+  FILL_RANDOM: 4,
 });

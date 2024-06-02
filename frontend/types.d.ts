@@ -17,5 +17,7 @@ export declare type EngineWasmExports = {
   memory: WebAssembly.Memory;
   init: () => number;
   axisLength: () => number;
+  clear: () => void;
   calcNextGen: (length: number) => number;
+  fillRandomly: (seed: bigint) => number;
 };

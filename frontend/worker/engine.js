@@ -13,9 +13,9 @@ class Engine {
 
   #coordinate = /** @type {[number,number,number]} */(new Array(3));
 
-  /** @type {import('../types').EngineWasmExports['calcNextGen']} */
-  #calcNextGenFn;
   #numAliveCells = 0;
+  /** @type {import('../types').EngineWasmExports} */
+  #wasmExports;
 
   constructor() {
     const module = new WebAssembly.Module(wasm);
@@ -27,17 +27,15 @@ class Engine {
         }
       }
     });
-    const { memory, axisLength, calcNextGen, init } = /** @type {import('../types').EngineWasmExports} */ (instance.exports);
+    this.#wasmExports = /** @type {import('../types').EngineWasmExports} */ (instance.exports);
 
-    const ptr = init() >>> 0;
-    this.axisLength = axisLength();
-    const bufferLength = (this.axisLength * this.axisLength) << 1;
-    this.#outputBuffer = new Uint32Array(memory.buffer).subarray(
+    const ptr = this.#wasmExports.init() >>> 0;
+    this.axisLength = this.#wasmExports.axisLength();
+    const bufferLength = this.axisLength * this.axisLength * Uint32Array.BYTES_PER_ELEMENT * 2;
+    this.#outputBuffer = new Uint32Array(this.#wasmExports.memory.buffer).subarray(
       ptr >> BYTES_PER_UNIT,
       (ptr + bufferLength) >> BYTES_PER_UNIT
     );
-
-    this.#calcNextGenFn = calcNextGen;
   }
 
   *aliveCells() {
@@ -53,7 +51,7 @@ class Engine {
 
   calcNextGen() {
     const start = performance.now();
-    this.#numAliveCells = this.#calcNextGenFn(this.#numAliveCells);
+    this.#numAliveCells = this.#wasmExports.calcNextGen(this.#numAliveCells);
     const dur = performance.now() - start;
     console.log('%cCALC', 'background: green; color: white', dur);
   }
@@ -75,10 +73,13 @@ class Engine {
   }
 
   clear() {
+    this.#wasmExports.clear();
     this.#numAliveCells = 0;
-    for (let i = 0; i < this.#outputBuffer.length; i++) {
-      this.#outputBuffer[i] = 0;
-    }
+  }
+
+  fillRandomly() {
+    const seed = BigInt(Date.now());
+    this.#numAliveCells = this.#wasmExports.fillRandomly(seed);
   }
 
   readSeed() {

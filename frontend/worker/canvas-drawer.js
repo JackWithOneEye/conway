@@ -6,7 +6,7 @@ class CanvasDrawer {
   /** @param {number} cs */
   set cellSize(cs) {
     this.#cellSize = cs;
-    this.#canvasLength = this.#cellSize * this.#axisLength;
+    this.#worldSize = this.#cellSize * this.#axisLength;
     this.incrementOffset(0, 0);
   }
 
@@ -15,12 +15,13 @@ class CanvasDrawer {
   /** @type {OffscreenCanvas} */
   #canvas;
   /** @type {number} */
-  #canvasLength;
-  /** @type {number} */
   #cellSize;
   /** @type {OffscreenCanvasRenderingContext2D} */
   #ctx;
   #offset = { x: 0, y: 0 };
+  #visibleCoordinates = { x: { start: 0, end: 0, within: true }, y: { start: 0, end: 0, within: true } };
+  /** @type {number} */
+  #worldSize;
 
   /** @type {[[number, number], [number, number]]} */
   #horizCoord = [[0, 0], [0, 0]];
@@ -38,7 +39,7 @@ class CanvasDrawer {
     this.#axisLength = axisLength;
     this.#canvas = canvas;
     this.#cellSize = cellSize;
-    this.#canvasLength = this.#cellSize * this.#axisLength;
+    this.#worldSize = this.#cellSize * this.#axisLength;
     this.#ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (this.#canvas.getContext('2d', { alpha: true }));
     this.setDimensions(height, width);
   }
@@ -51,56 +52,12 @@ class CanvasDrawer {
     this.#ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
     this.#drawGrid();
 
-    const csInv = 1 / this.#cellSize;
-
-    let visX = 0;
-    let visXEnd = Infinity;
-    if (this.#canvas.width < this.#canvasLength) {
-      if (this.#offset.x <= 0) {
-        visX = Math.floor(-this.#offset.x * csInv)
-      } else {
-        visX = Math.floor(this.#axisLength - (this.#offset.x * csInv))
-      }
-      visXEnd = visX + Math.ceil(this.#canvas.width * csInv);
-      if (visXEnd >= this.#axisLength) {
-        visXEnd -= this.#axisLength;
-      }
-    }
-
-    let visY = 0;
-    let visYEnd = Infinity;
-    if (this.#canvas.height < this.#canvasLength) {
-      if (this.#offset.y <= 0) {
-        visY = Math.floor(-this.#offset.y * csInv)
-      } else {
-        visY = Math.floor(this.#axisLength - (this.#offset.y * csInv))
-      }
-      visYEnd = visY + Math.ceil(this.#canvas.height * csInv);
-      if (visYEnd >= this.#axisLength) {
-        visYEnd -= this.#axisLength;
-      }
-    }
-
-    // console.log('VISIBLE WORLD',
-    //   visX,
-    //   visXEnd,
-    //   visY,
-    //   visYEnd
-    // )
-
     let cnt = 0;
     for (const [x, y, colour] of cellsIter) {
-      if (
-        ((visX < visXEnd) && (x < visX || x > visXEnd)) ||
-        ((visX > visXEnd) && (x > visXEnd && x < visX)) ||
-
-        ((visY < visYEnd) && (y < visY || y > visYEnd)) ||
-        ((visY > visYEnd) && (y > visYEnd && y < visY))
-      ) {
-        continue;
+      if (this.#coordIsVisible(x, y)) {
+        this.#fillCell(x, y, colour);
+        cnt++;
       }
-      this.#fillCell(x, y, colour);
-      cnt++;
     }
     const dur = performance.now() - start;
     console.log('%cDRAW', 'background: green; color: white', dur, cnt);
@@ -129,15 +86,17 @@ class CanvasDrawer {
    */
   incrementOffset(x, y) {
     let ox = this.#offset.x + x;
-    while (Math.abs(ox) >= this.#canvasLength) {
-      ox = Math.sign(ox) * (Math.abs(ox) - this.#canvasLength);
+    while (Math.abs(ox) >= this.#worldSize) {
+      ox = Math.sign(ox) * (Math.abs(ox) - this.#worldSize);
     }
     this.#offset.x = ox;
     let oy = this.#offset.y + y;
-    while (Math.abs(oy) >= this.#canvasLength) {
-      oy = Math.sign(oy) * (Math.abs(oy) - this.#canvasLength);
+    while (Math.abs(oy) >= this.#worldSize) {
+      oy = Math.sign(oy) * (Math.abs(oy) - this.#worldSize);
     }
     this.#offset.y = oy;
+
+    this.#calcVisibleCoordinates();
   }
 
   /**
@@ -159,12 +118,79 @@ class CanvasDrawer {
   setDimensions(h, w) {
     this.#canvas.height = h;
     this.#canvas.width = w;
+    this.#calcVisibleCoordinates();
+  }
+
+  #calcVisibleCoordinates() {
+    const csInv = 1 / this.#cellSize;
+
+    if (this.#canvas.width < this.#worldSize) {
+      if (this.#offset.x <= 0) {
+        this.#visibleCoordinates.x.start = Math.floor(-this.#offset.x * csInv)
+      } else {
+        this.#visibleCoordinates.x.start = Math.floor(this.#axisLength - (this.#offset.x * csInv))
+      }
+      this.#visibleCoordinates.x.end = this.#visibleCoordinates.x.start + Math.ceil(this.#canvas.width * csInv);
+      if (this.#visibleCoordinates.x.end >= this.#axisLength) {
+        this.#visibleCoordinates.x.end -= this.#axisLength;
+      }
+    } else {
+      this.#visibleCoordinates.x.start = 0;
+      this.#visibleCoordinates.x.end = Infinity;
+    }
+    this.#visibleCoordinates.x.within = this.#visibleCoordinates.x.start < this.#visibleCoordinates.x.end;
+
+    if (this.#canvas.height < this.#worldSize) {
+      if (this.#offset.y <= 0) {
+        this.#visibleCoordinates.y.start = Math.floor(-this.#offset.y * csInv)
+      } else {
+        this.#visibleCoordinates.y.start = Math.floor(this.#axisLength - (this.#offset.y * csInv))
+      }
+      this.#visibleCoordinates.y.end = this.#visibleCoordinates.y.start + Math.ceil(this.#canvas.height * csInv);
+      if (this.#visibleCoordinates.y.end >= this.#axisLength) {
+        this.#visibleCoordinates.y.end -= this.#axisLength;
+      }
+    } else {
+      this.#visibleCoordinates.y.start = 0;
+      this.#visibleCoordinates.y.end = Infinity;
+    }
+    this.#visibleCoordinates.y.within = this.#visibleCoordinates.y.start < this.#visibleCoordinates.y.end;
+
+    // console.log('VISIBLE WORLD',
+    //   visX,
+    //   visXEnd,
+    //   visY,
+    //   visYEnd
+    // )
+  }
+
+  /**
+   * @param {number} cx 
+   * @param {number} cy 
+   */
+  #coordIsVisible(cx, cy) {
+    const { x, y } = this.#visibleCoordinates;
+    if (x.within && (cx < x.start || cx > x.end)) {
+      return false;
+    }
+    if (!x.within && cx < x.start && cx > x.end) {
+      return false;
+    }
+
+    if (y.within && (cy < y.start || cy > y.end)) {
+      return false;
+    }
+    if (!y.within && cy < y.start && cy > y.end) {
+      return false;
+    }
+
+    return true;
   }
 
   #drawGrid() {
     this.#ctx.beginPath();
-    const width = Math.min(this.#canvas.width, this.#canvasLength);
-    const height = Math.min(this.#canvas.height, this.#canvasLength);
+    const width = Math.min(this.#canvas.width, this.#worldSize);
+    const height = Math.min(this.#canvas.height, this.#worldSize);
 
     let x = this.#offset.x % this.#cellSize;
     while (x <= width) {
@@ -199,15 +225,15 @@ class CanvasDrawer {
     if (x < 0 && xEnd > 0) {
       this.#horizCoord[0][0] = 0;
       this.#horizCoord[0][1] = xEnd;
-      this.#horizCoord[1][0] = this.#canvasLength + x + GRID_LINE_WIDTH;
+      this.#horizCoord[1][0] = this.#worldSize + x + GRID_LINE_WIDTH;
       this.#horizCoord[1][1] = -x;
       horizLen = 2;
     } else if (x < 0 && xEnd <= 0) {
-      x += this.#canvasLength;
-    } else if (x >= this.#canvasLength) {
-      x -= this.#canvasLength;
-    } else if (xEnd >= this.#canvasLength) {
-      const leftWidth = this.#canvasLength - x;
+      x += this.#worldSize;
+    } else if (x >= this.#worldSize) {
+      x -= this.#worldSize;
+    } else if (xEnd >= this.#worldSize) {
+      const leftWidth = this.#worldSize - x;
       this.#horizCoord[0][0] = x + GRID_LINE_WIDTH;
       this.#horizCoord[0][1] = leftWidth - GRID_LINE_WIDTH;
       this.#horizCoord[1][0] = 0;
@@ -226,15 +252,15 @@ class CanvasDrawer {
     if (y < 0 && yEnd > 0) {
       this.#vertCoord[0][0] = 0;
       this.#vertCoord[0][1] = yEnd;
-      this.#vertCoord[1][0] = this.#canvasLength + y + GRID_LINE_WIDTH;
+      this.#vertCoord[1][0] = this.#worldSize + y + GRID_LINE_WIDTH;
       this.#vertCoord[1][1] = -y;
       vertLen = 2;
     } else if (y < 0 && yEnd <= 0) {
-      y += this.#canvasLength;
-    } else if (y >= this.#canvasLength) {
-      y -= this.#canvasLength;
-    } else if (yEnd >= this.#canvasLength) {
-      const topHeight = this.#canvasLength - y;
+      y += this.#worldSize;
+    } else if (y >= this.#worldSize) {
+      y -= this.#worldSize;
+    } else if (yEnd >= this.#worldSize) {
+      const topHeight = this.#worldSize - y;
       this.#vertCoord[0][0] = y + GRID_LINE_WIDTH;
       this.#vertCoord[0][1] = topHeight;
       this.#vertCoord[1][0] = 0;

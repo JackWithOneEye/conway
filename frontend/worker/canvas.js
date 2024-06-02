@@ -59,14 +59,28 @@ self.onmessage = function ({ data }) {
         redraw = true;
       }
 
-      if ((type & MessageType.CONTROL) === MessageType.CONTROL) {
-        const cmd = messageBuffer[MessageIndex.CONTROL_CMD];
-        if (cmd === Command.NEXT) {
-          looper.requestAnimation();
-        } else if (cmd === Command.PLAY) {
-          looper.start();
-        } else if (cmd === Command.STOP) {
-          looper.stop();
+      if ((type & MessageType.COMMAND) === MessageType.COMMAND) {
+        const cmd = messageBuffer[MessageIndex.COMMAND];
+        switch (cmd) {
+          case Command.NEXT:
+            looper.requestAnimation();
+            break;
+          case Command.PLAY:
+            looper.start();
+            break;
+          case Command.STOP:
+            looper.stop();
+            break;
+          case Command.CLEAR:
+            engine.clear();
+            postSeed();
+            redraw = true;
+            break;
+          case Command.FILL_RANDOM:
+            engine.fillRandomly();
+            postSeed();
+            redraw = true;
+            break;
         }
       }
 
@@ -122,12 +136,6 @@ self.onmessage = function ({ data }) {
           postSeed();
           redraw = true;
         }
-      }
-
-      if ((type & MessageType.CLEAR) === MessageType.CLEAR) {
-        engine.clear();
-        postSeed();
-        redraw = true;
       }
 
       if (redraw) {

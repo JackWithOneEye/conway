@@ -100,6 +100,30 @@ export fn axisLength() usize {
     return axis_length;
 }
 
+export fn clear() void {
+    @memset(&output_buffer, .{ .x = 0, .y = 0, .colour = 0 });
+}
+
+export fn fillRandomly(seed: u64) u32 {
+    clear();
+
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+
+    var num_alive: u32 = 0;
+    for (0..axis_length) |x| {
+        for (0..axis_length) |y| {
+            if (rand.boolean()) {
+                continue;
+            }
+            const colour = rand.uintLessThan(u32, 0xffffff);
+            output_buffer[num_alive].set(@truncate(x), @truncate(y), colour);
+            num_alive += 1;
+        }
+    }
+    return num_alive;
+}
+
 fn makeCoord(x: u16, y: u16) u32 {
     return (@as(u32, x) << 16) | y;
 }
