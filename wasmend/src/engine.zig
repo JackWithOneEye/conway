@@ -24,46 +24,32 @@ const AliveCell = packed struct {
     }
 };
 
-const CellNeighbour = struct {
+const CellCandidate = struct {
     x: u16,
     y: u16,
     colour: u32,
+    alive: bool,
     alive_neighbours: [3]AliveCell,
     count: u4,
-    survivor: bool,
-    fn new(cell: *const AliveCell, x: u16, y: u16) CellNeighbour {
-        var cn = CellNeighbour{ .x = x, .y = y, .colour = 0, .count = 1, .survivor = false, .alive_neighbours = undefined };
-        cn.alive_neighbours[0].copy(cell);
-        return cn;
-    }
-    fn increment(self: *CellNeighbour, neighbour: *const AliveCell) void {
+    fn addNeighbour(self: *CellCandidate, neighbour: *const AliveCell) void {
         if (self.count < 3) {
             self.alive_neighbours[self.count].copy(neighbour);
         }
         self.count += 1;
     }
-    fn survive(self: *CellNeighbour, colour: u32) void {
-        if (self.count == 2) {
-            self.count += 1;
-        }
-        self.colour = colour;
-        self.survivor = true;
-    }
-    fn create(self: *CellNeighbour) void {
+    fn create(self: *CellCandidate) void {
         var n_0 = self.alive_neighbours[0];
         var n_1 = self.alive_neighbours[1];
         var n_2 = self.alive_neighbours[2];
 
-        // sort
+        // sort clockwise
         if (n_0.x < n_1.x or n_0.y < n_1.y) {
-            if (n_1.x < n_2.x or n_1.y < n_2.y) {
-                // nothing
-            } else if (n_0.x < n_2.x or n_0.y < n_2.y) {
-                n_1 = self.alive_neighbours[2];
-                n_2 = self.alive_neighbours[1];
-            } else {
+            if (n_2.x < n_0.x or n_2.y < n_0.y) {
                 n_0 = self.alive_neighbours[2];
                 n_1 = self.alive_neighbours[0];
+                n_2 = self.alive_neighbours[1];
+            } else if (n_2.x < n_1.x or n_2.y < n_1.y) {
+                n_1 = self.alive_neighbours[2];
                 n_2 = self.alive_neighbours[1];
             }
         } else {
@@ -86,13 +72,13 @@ const CellNeighbour = struct {
 };
 
 var output_buffer = std.mem.zeroes([num_cells]AliveCell);
-var neighbours = std.AutoArrayHashMap(u32, CellNeighbour).init(allocator);
+var candidates = std.AutoArrayHashMap(u32, CellCandidate).init(allocator);
 
 export fn init() [*]u32 {
     for (0..num_cells) |i| {
-        neighbours.put(@truncate(i), undefined) catch continue;
+        candidates.put(@truncate(i), undefined) catch continue;
     }
-    neighbours.clearRetainingCapacity();
+    candidates.clearRetainingCapacity();
     return @ptrCast(&output_buffer);
 }
 
@@ -128,14 +114,28 @@ fn makeCoord(x: u16, y: u16) u32 {
     return (@as(u32, x) << 16) | y;
 }
 
-fn setNeighbour(cell: *const AliveCell, x: u16, y: u16) void {
-    const coord = makeCoord(x, y);
-    const n_opt = neighbours.getPtr(coord);
-    if (n_opt) |n| {
-        n.increment(cell);
+fn setCellAsCandidate(cell: *const AliveCell) void {
+    const coord = makeCoord(cell.x, cell.y);
+    const cand_opt = candidates.getPtr(coord);
+    if (cand_opt) |cand| {
+        cand.alive = true;
+        cand.colour = cell.colour;
         return;
     }
-    neighbours.putAssumeCapacity(coord, CellNeighbour.new(cell, x, y));
+
+    candidates.putAssumeCapacity(coord, CellCandidate{ .x = cell.x, .y = cell.y, .colour = cell.colour, .count = 0, .alive = true, .alive_neighbours = undefined });
+}
+
+fn setNeighbourAsCandidate(cell: *const AliveCell, x: u16, y: u16) void {
+    const coord = makeCoord(x, y);
+    const cand_opt = candidates.getPtr(coord);
+    if (cand_opt) |cand| {
+        cand.addNeighbour(cell);
+        return;
+    }
+    var alive_neighbours: [3]AliveCell = undefined;
+    alive_neighbours[0].copy(cell);
+    candidates.putAssumeCapacity(coord, CellCandidate{ .x = x, .y = y, .colour = 0, .count = 1, .alive = false, .alive_neighbours = alive_neighbours });
 }
 
 export fn calcNextGen(length: u32) u32 {
@@ -149,40 +149,36 @@ export fn calcNextGen(length: u32) u32 {
         const y_up = (y -% 1) & wrap_mask;
         const y_down = (y + 1) & wrap_mask;
 
-        setNeighbour(&cell, x_left, y_up);
-        setNeighbour(&cell, x, y_up);
-        setNeighbour(&cell, x_right, y_up);
+        setNeighbourAsCandidate(&cell, x_left, y_up);
+        setNeighbourAsCandidate(&cell, x, y_up);
+        setNeighbourAsCandidate(&cell, x_right, y_up);
 
-        setNeighbour(&cell, x_left, y);
-        setNeighbour(&cell, x_right, y);
+        setNeighbourAsCandidate(&cell, x_left, y);
+        setCellAsCandidate(&cell);
+        setNeighbourAsCandidate(&cell, x_right, y);
 
-        setNeighbour(&cell, x_left, y_down);
-        setNeighbour(&cell, x, y_down);
-        setNeighbour(&cell, x_right, y_down);
+        setNeighbourAsCandidate(&cell, x_left, y_down);
+        setNeighbourAsCandidate(&cell, x, y_down);
+        setNeighbourAsCandidate(&cell, x_right, y_down);
     }
 
-    for (output_buffer[0..length]) |cell| {
-        const coord = makeCoord(cell.x, cell.y);
-        const n_opt = neighbours.getPtr(coord);
-        if (n_opt) |n| {
-            const cnt = n.count;
-            if (cnt == 2 or cnt == 3) {
-                n.survive(cell.colour);
-            }
+    var iter = candidates.iterator();
+    while (iter.next()) |e| {
+        var cand = e.value_ptr;
+        if (cand.count < 2 or cand.count > 3) {
+            continue;
         }
-    }
 
-    var iter = neighbours.iterator();
-    while (iter.next()) |neighbour| {
-        var n = neighbour.value_ptr;
-        if (n.count == 3) {
-            if (!n.survivor) {
-                n.create();
+        if (!cand.alive) {
+            if (cand.count == 2) {
+                continue;
             }
-            output_buffer[num_alive].set(n.x, n.y, n.colour);
-            num_alive += 1;
+            cand.create();
         }
+
+        output_buffer[num_alive].set(cand.x, cand.y, cand.colour);
+        num_alive += 1;
     }
-    neighbours.clearRetainingCapacity();
+    candidates.clearRetainingCapacity();
     return num_alive;
 }
